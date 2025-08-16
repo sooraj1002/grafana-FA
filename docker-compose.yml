@@ -69,7 +69,7 @@ services:
       GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
       GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "85a03867-dccf-4882-adde-1a79aeec50df"
       GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "super-secret-client-secret-that-is-long-enough"
-      GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile email roles"
+      GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile email"
       GF_AUTH_GENERIC_OAUTH_AUTH_URL: "http://localhost:9011/oauth2/authorize"
       GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "http://fusionauth:9011/oauth2/token"
       GF_AUTH_GENERIC_OAUTH_API_URL: "http://fusionauth:9011/oauth2/userinfo"
