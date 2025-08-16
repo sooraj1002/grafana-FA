@@ -2,7 +2,11 @@
   "variables": {
     "applicationId": "85a03867-dccf-4882-adde-1a79aeec50df",
     "grafanaClientSecret": "super-secret-client-secret-that-is-long-enough",
-    "adminUserId": "00000000-0000-0000-0000-000000000001"
+    "adminUserId": "00000000-0000-0000-0000-000000000001",
+    "grafanaAdminUserId": "00000000-0000-0000-0000-000000000002",
+    "grafanaEditorUserId": "00000000-0000-0000-0000-000000000003",
+    "grafanaViewerUserId": "00000000-0000-0000-0000-000000000004",
+    "grafanaLambdaId": "00000000-0000-0000-0000-000000000010"
   },
   "apiKeys": [
     {
@@ -17,7 +21,7 @@
       "body": {
         "user": {
           "id": "#{adminUserId}",
-          "email": "admin@gmail.com",
+          "email": "admin@fa.com",
           "firstName": "Admin",
           "lastName": "User",
           "password": "adminpassword",
@@ -31,9 +35,20 @@
       "body": {
         "registration": {
           "applicationId": "3c219e58-ed0e-4b18-ad48-f4f92793ae32",
-          "roles": [
-            "admin"
-          ]
+          "roles": ["admin"]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/lambda/#{grafanaLambdaId}",
+      "body": {
+        "lambda": {
+          "id": "#{grafanaLambdaId}",
+          "name": "Populate Grafana Roles",
+          "type": "JWTPopulate",
+          "engineType": "GraalJS",
+          "body": "function populate(jwt, user, registration) { const grafanaApplicationId = '85a03867-dccf-4882-adde-1a79aeec50df'; if (registration && registration.applicationId === grafanaApplicationId) { jwt.roles = registration.roles; } }"
         }
       }
     },
@@ -50,10 +65,7 @@
             ],
             "clientId": "#{applicationId}",
             "clientSecret": "#{grafanaClientSecret}",
-            "enabledGrants": [
-              "authorization_code",
-              "refresh_token"
-            ],
+            "enabledGrants": ["authorization_code", "refresh_token"],
             "generateRefreshTokens": true,
             "requireClientAuthentication": true,
             "logoutURL": "http://localhost:3000/logout",
@@ -63,7 +75,9 @@
           "jwtConfiguration": {
             "enabled": true,
             "timeToLiveInSeconds": 3600,
-            "refreshTokenTimeToLiveInMinutes": 43200
+            "refreshTokenTimeToLiveInMinutes": 43200,
+            "accessTokenPopulateId": "#{grafanaLambdaId}",
+            "idTokenPopulateId": "#{grafanaLambdaId}"
           },
           "roles": [
             {
@@ -71,7 +85,7 @@
               "description": "Grafana Administrator"
             },
             {
-              "name": "grafana-editor", 
+              "name": "grafana-editor",
               "description": "Grafana Editor"
             },
             {
@@ -84,58 +98,73 @@
     },
     {
       "method": "POST",
-      "url": "/api/user",
+      "url": "/api/user/#{grafanaAdminUserId}",
       "body": {
         "user": {
-          "email": "admin@example.com",
+          "id": "#{grafanaAdminUserId}",
+          "email": "admin@grafana.com",
           "firstName": "Admin",
-          "lastName": "User", 
+          "lastName": "User",
           "password": "password123",
           "active": true
-        },
-        "registration": {
-          "applicationId": "#{applicationId}",
-          "roles": [
-            "grafana-admin"
-          ]
         }
       }
     },
     {
       "method": "POST",
-      "url": "/api/user", 
+      "url": "/api/user/registration/#{grafanaAdminUserId}",
+      "body": {
+        "registration": {
+          "applicationId": "#{applicationId}",
+          "roles": ["grafana-admin"]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/user/#{grafanaEditorUserId}",
       "body": {
         "user": {
-          "email": "editor@example.com",
+          "id": "#{grafanaEditorUserId}",
+          "email": "editor@grafana.com",
           "firstName": "Editor",
           "lastName": "User",
-          "password": "password123", 
+          "password": "password123",
           "active": true
-        },
-        "registration": {
-          "applicationId": "#{applicationId}",
-          "roles": [
-            "grafana-editor"
-          ]
         }
       }
     },
     {
       "method": "POST",
-      "url": "/api/user",
+      "url": "/api/user/registration/#{grafanaEditorUserId}",
+      "body": {
+        "registration": {
+          "applicationId": "#{applicationId}",
+          "roles": ["grafana-editor"]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/user/#{grafanaViewerUserId}",
       "body": {
         "user": {
-          "email": "viewer@example.com",
-          "firstName": "Viewer", 
+          "id": "#{grafanaViewerUserId}",
+          "email": "viewer@grafana.com",
+          "firstName": "Viewer",
           "lastName": "User",
           "password": "password123",
           "active": true
-        },
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/user/registration/#{grafanaViewerUserId}",
+      "body": {
         "registration": {
           "applicationId": "#{applicationId}",
-          "roles": [
-            "grafana-viewer"
-          ]
+          "roles": ["grafana-viewer"]
         }
       }
     }
