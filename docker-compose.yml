@@ -79,8 +79,7 @@ services:
       # Keep login form but hide it after successful OAuth setup
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
       GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_MAP: "grafana-admin:Admin, grafana-editor:Editor, grafana-viewer:Viewer"
-
-      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(roles[*], 'grafana-admin') && 'Admin' || 'Viewer'"
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(roles[*], 'grafana-admin') && 'Admin' || contains(roles[*], 'grafana-editor') && 'Editor' || 'Viewer'"
 
       # Enable debug logging for OAuth
       GF_LOG_LEVEL: "debug"
