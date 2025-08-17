@@ -42,49 +42,49 @@ app.post('/webhook/user-registered', async (req, res) => {
 
     console.log(`\n=== 📋 PROCESSING USER: ${userEmail} ===`);
 
-    // Step 1: Get or create user in Grafana
-    console.log('🔍 STEP 1: Looking up or creating user in Grafana...');
+    // Step 1: Get user from Grafana (expect user to already exist)
+    console.log('🔍 STEP 1: Looking up user in Grafana...');
     console.log(`   → Sending GET request to: ${GRAFANA_API_URL}/api/users/lookup?loginOrEmail=${userEmail}`);
     console.log(`   → Using credentials: admin`);
     
     let grafanaUser = await getGrafanaUserByEmail(userEmail);
     if (!grafanaUser) {
       console.log(`❌ USER NOT FOUND: ${userEmail} not found in Grafana`);
-      console.log('   → Creating user in Grafana...');
-      
-      grafanaUser = await createGrafanaUser(user);
-      if (!grafanaUser) {
-        throw new Error('Failed to create user in Grafana');
-      }
-      
-      console.log(`✅ USER CREATED: New Grafana user ID = ${grafanaUser.id}`);
-    } else {
-      console.log(`✅ USER FOUND: Existing Grafana user ID = ${grafanaUser.id}`);
+      throw new Error(`User ${userEmail} does not exist in Grafana. User must be created through another process.`);
     }
     
+    console.log(`✅ USER FOUND: Existing Grafana user ID = ${grafanaUser.id}`);
     console.log(`   → User details:`, JSON.stringify(grafanaUser, null, 2));
 
-    // Step 2: Create private folder for the user
+    // Step 2: Check if private folder already exists or create one
     const folderName = `${userEmail}'s Dashboards`;
-    console.log(`\n🗂️  STEP 2: Creating private folder "${folderName}"...`);
-    console.log(`   → Sending POST request to: ${GRAFANA_API_URL}/api/folders`);
+    console.log(`\n🗂️  STEP 2: Checking for existing private folder "${folderName}"...`);
     
-    const folder = await createGrafanaFolder(folderName);
-    if (!folder) {
-      throw new Error('Failed to create folder');
+    let folder = await findUserPrivateFolder(userEmail);
+    if (folder) {
+      console.log(`✅ FOLDER EXISTS: Found existing folder ID = ${folder.id}, UID = ${folder.uid}`);
+      console.log(`   → Folder details:`, JSON.stringify(folder, null, 2));
+    } else {
+      console.log(`❌ FOLDER NOT FOUND: Creating new folder "${folderName}"...`);
+      console.log(`   → Sending POST request to: ${GRAFANA_API_URL}/api/folders`);
+      
+      folder = await createGrafanaFolder(folderName);
+      if (!folder) {
+        throw new Error('Failed to create folder');
+      }
+
+      console.log(`✅ FOLDER CREATED: ID = ${folder.id}, UID = ${folder.uid}`);
+      console.log(`   → Folder details:`, JSON.stringify(folder, null, 2));
+
+      // Step 3: Set folder permissions (only for newly created folders)
+      console.log(`\n🔐 STEP 3: Setting folder permissions...`);
+      console.log(`   → Granting admin access to user ID ${grafanaUser.id} for folder UID ${folder.uid}`);
+      console.log(`   → Sending POST request to: ${GRAFANA_API_URL}/api/folders/${folder.uid}/permissions`);
+      
+      await setFolderPermissions(folder.uid, grafanaUser.id);
+
+      console.log(`✅ PERMISSIONS SET: User ${userEmail} has admin access to folder "${folderName}"`);
     }
-
-    console.log(`✅ FOLDER CREATED: ID = ${folder.id}, UID = ${folder.uid}`);
-    console.log(`   → Folder details:`, JSON.stringify(folder, null, 2));
-
-    // Step 3: Set folder permissions (only the user can access)
-    console.log(`\n🔐 STEP 3: Setting folder permissions...`);
-    console.log(`   → Granting admin access to user ID ${grafanaUser.id} for folder UID ${folder.uid}`);
-    console.log(`   → Sending POST request to: ${GRAFANA_API_URL}/api/folders/${folder.uid}/permissions`);
-    
-    await setFolderPermissions(folder.uid, grafanaUser.id);
-
-    console.log(`✅ PERMISSIONS SET: User ${userEmail} has admin access to folder "${folderName}"`);
     
     const processingTime = Date.now() - startTime;
     console.log(`\n=== 🎉 SUCCESS SUMMARY ===`);
@@ -120,6 +120,37 @@ app.post('/webhook/user-registered', async (req, res) => {
   }
 });
 
+// Check if user's private folder already exists
+async function findUserPrivateFolder(userEmail) {
+  try {
+    const folderName = `${userEmail}'s Dashboards`;
+    console.log(`   → Making API call to search for folder "${folderName}"...`);
+    
+    const response = await axios.get(`${GRAFANA_API_URL}/api/folders`, {
+      auth: {
+        username: 'admin',
+        password: 'admin123'
+      }
+    });
+    
+    console.log(`   → ✅ Grafana API Response (${response.status}): Found ${response.data.length} folders`);
+    
+    // Find folder by exact title match
+    const existingFolder = response.data.find(folder => folder.title === folderName);
+    
+    if (existingFolder) {
+      console.log(`   → ✅ Found existing folder: ${existingFolder.title}`);
+      return existingFolder;
+    } else {
+      console.log(`   → ❌ No existing folder found with title: ${folderName}`);
+      return null;
+    }
+  } catch (error) {
+    console.log(`   → ❌ Grafana API Error (${error.response?.status}):`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
 // Get Grafana user by email
 async function getGrafanaUserByEmail(email) {
   try {
@@ -142,41 +173,6 @@ async function getGrafanaUserByEmail(email) {
   }
 }
 
-// Create a new user in Grafana
-async function createGrafanaUser(userFromFA) {
-  try {
-    const userPayload = {
-      email: userFromFA.email,
-      login: userFromFA.email,
-      name: `${userFromFA.firstName || ''} ${userFromFA.lastName || ''}`.trim() || userFromFA.email,
-      password: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15), // Random password since user will login via OAuth
-      OrgId: 1 // Default organization
-    };
-    
-    console.log(`   → Making API call to create user...`);
-    console.log(`   → User payload:`, JSON.stringify(userPayload, null, 2));
-    
-    const response = await axios.post(`${GRAFANA_API_URL}/api/admin/users`, userPayload, {
-      auth: {
-        username: 'admin',
-        password: 'admin123'
-      }
-    });
-    
-    console.log(`   → ✅ Grafana API Response (${response.status}):`, JSON.stringify(response.data, null, 2));
-    
-    // Return the created user in the same format as lookup
-    return {
-      id: response.data.id,
-      email: userPayload.email,
-      login: userPayload.login,
-      name: userPayload.name
-    };
-  } catch (error) {
-    console.log(`   → ❌ Grafana API Error (${error.response?.status}):`, error.response?.data || error.message);
-    throw error;
-  }
-}
 
 // Create a new folder in Grafana
 async function createGrafanaFolder(title) {

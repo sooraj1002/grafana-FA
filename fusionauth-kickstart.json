@@ -7,7 +7,8 @@
     "grafanaEditorUserId": "00000000-0000-0000-0000-000000000003",
     "grafanaViewerUserId": "00000000-0000-0000-0000-000000000004",
     "grafanaLambdaId": "00000000-0000-0000-0000-000000000010",
-    "grafanaRegistrationWebhookId": "00000000-0000-0000-0000-000000000021"
+    "grafanaRegistrationWebhookId": "00000000-0000-0000-0000-000000000021",
+    "defaultTenantId": "9f255291-7f43-4721-995a-e7c622384755"
   },
   "apiKeys": [
     {
@@ -183,13 +184,14 @@
           "url": "http://webhook-service:3001/webhook/user-registered",
           "connectTimeout": 1000,
           "readTimeout": 1000,
-          "eventsEnabled": {
-            "user.registration.create": true
-          },
-          "applicationConfiguration": {
-            "#{applicationId}": {
+          "global": false,
+          "tenantConfiguration": {
+            "#{defaultTenantId}": {
               "enabled": true
             }
+          },
+          "eventsEnabled": {
+            "user.login.success": true
           }
         }
       }
