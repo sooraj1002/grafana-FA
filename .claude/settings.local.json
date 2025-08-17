@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(docker compose down:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "WebSearch",
+      "WebFetch(domain:grafana.com)"
     ],
     "deny": [],
     "ask": []

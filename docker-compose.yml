@@ -88,12 +88,50 @@ services:
       GF_AUTH_GENERIC_OAUTH_AUTO_ASSIGN_ORG: "true"
       GF_AUTH_GENERIC_OAUTH_AUTO_ASSIGN_ORG_ID: "1"
       GF_AUTH_GENERIC_OAUTH_AUTO_ASSIGN_ORG_ROLE: "Viewer"
+
+      # Provisioning configuration
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     ports:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      # Mount provisioning files
+      - ./provisioning:/etc/grafana/provisioning
+      # Mount common dashboards directory
+      - ./dashboards/common:/var/lib/grafana/common-dashboards
     networks:
       - grafana
+
+  # Grafana Initialization - Creates service account and token
+  grafana-init:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile
+    depends_on:
+      - grafana
+    volumes:
+      - shared_data:/shared
+    networks:
+      - grafana
+    restart: "no"
+
+  # Webhook Service for Private Folder Creation
+  webhook-service:
+    build:
+      context: ./webhook-service
+      dockerfile: Dockerfile
+    depends_on:
+      - grafana-init
+    environment:
+      - GRAFANA_API_URL=http://grafana:3000
+      - WEBHOOK_PORT=3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - shared_data:/shared
+    networks:
+      - grafana
+    restart: unless-stopped
 
 networks:
   fusionauth:
@@ -106,3 +144,4 @@ volumes:
   search_data:
   fusionauth_config:
   grafana_data:
+  shared_data:

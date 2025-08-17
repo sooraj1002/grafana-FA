@@ -6,7 +6,8 @@
     "grafanaAdminUserId": "00000000-0000-0000-0000-000000000002",
     "grafanaEditorUserId": "00000000-0000-0000-0000-000000000003",
     "grafanaViewerUserId": "00000000-0000-0000-0000-000000000004",
-    "grafanaLambdaId": "00000000-0000-0000-0000-000000000010"
+    "grafanaLambdaId": "00000000-0000-0000-0000-000000000010",
+    "grafanaRegistrationWebhookId": "00000000-0000-0000-0000-000000000021"
   },
   "apiKeys": [
     {
@@ -165,6 +166,27 @@
         "registration": {
           "applicationId": "#{applicationId}",
           "roles": ["grafana-viewer"]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/webhook/#{grafanaRegistrationWebhookId}",
+      "body": {
+        "webhook": {
+          "id": "#{grafanaRegistrationWebhookId}",
+          "description": "Webhook for new user registrations to the Grafana application.",
+          "url": "http://webhook-service:3001/webhook/user-registered",
+          "connectTimeout": 1000,
+          "readTimeout": 1000,
+          "eventsEnabled": {
+            "user.registration.create": true
+          },
+          "applicationConfiguration": {
+            "#{applicationId}": {
+              "enabled": true
+            }
+          }
         }
       }
     }
