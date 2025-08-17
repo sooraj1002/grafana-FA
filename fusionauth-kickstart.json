@@ -60,6 +60,10 @@
         "application": {
           "id": "#{applicationId}",
           "name": "Grafana",
+          "registrationConfiguration": {
+            "enabled": true,
+            "type": "basic"
+          },
           "oauthConfiguration": {
             "authorizedRedirectURLs": [
               "http://localhost:3000/login/generic_oauth"
